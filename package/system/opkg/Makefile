@@ -57,6 +57,8 @@ endef
 define Package/opkg
   $(call Package/opkg/Default)
   VARIANT:=unsigned
+  DEPENDS+=+PACKAGE_opkg:libopenssl
+  DEPENDS+=+PACKAGE_opkg:libcurl
 endef
 
 define Package/opkg/description
@@ -90,7 +92,7 @@ TARGET_CFLAGS += -ffunction-sections -fdata-sections
 EXTRA_CFLAGS += $(TARGET_CPPFLAGS)
 
 CONFIGURE_ARGS += \
-	--disable-curl \
+	--enable-curl \
 	--disable-gpg \
 	--enable-sha256 \
 	--with-opkgetcdir=/etc \
