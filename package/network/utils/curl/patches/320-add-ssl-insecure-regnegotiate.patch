@@ -1,0 +1,11 @@
+--- curl-7.43.0/lib/vtls/openssl.c.orig	2015-06-14 22:31:01.000000000 +0100
++++ curl-7.43.0/lib/vtls/openssl.c	2015-10-29 19:35:51.952538846 +0000
+@@ -1795,6 +1795,8 @@
+ 
+   ctx_options = SSL_OP_ALL;
+ 
++  ctx_options |= SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION;
++
+ #ifdef SSL_OP_NO_TICKET
+   ctx_options |= SSL_OP_NO_TICKET;
+ #endif
