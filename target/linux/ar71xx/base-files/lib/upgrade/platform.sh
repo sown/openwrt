@@ -218,6 +218,7 @@ platform_check_image() {
 	esr900 | \
 	ew-dorin | \
 	ew-dorin-router | \
+	gl-ar150 | \
 	hiwifi-hc6361 | \
 	hornet-ub-x2 | \
 	mzk-w04nu | \
