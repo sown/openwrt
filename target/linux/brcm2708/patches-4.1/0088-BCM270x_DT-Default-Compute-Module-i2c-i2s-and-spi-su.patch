@@ -1,7 +1,7 @@
-From afb4d6a911d50ca4a64371a64650c4a89181fa70 Mon Sep 17 00:00:00 2001
+From 7d1e12b7f075e6aa161b83c28377ae680bfd8680 Mon Sep 17 00:00:00 2001
 From: Phil Elwell <phil@raspberrypi.org>
 Date: Wed, 17 Jun 2015 17:10:40 +0100
-Subject: [PATCH 088/171] BCM270x_DT: Default Compute Module i2c, i2s and spi
+Subject: [PATCH 088/222] BCM270x_DT: Default Compute Module i2c, i2s and spi
  support
 
 ---

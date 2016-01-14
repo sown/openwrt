@@ -1,7 +1,7 @@
-From fb89852f9971a3d5f40be06e2d8017b9b9b56e19 Mon Sep 17 00:00:00 2001
+From 17013b51143d2f549f736e784af64f861d01a717 Mon Sep 17 00:00:00 2001
 From: Martin Sperl <kernel@martin.sperl.org>
 Date: Tue, 12 May 2015 10:32:08 +0000
-Subject: [PATCH 157/171] spi: bcm2835: fix kbuild compile warnings/errors and
+Subject: [PATCH 157/222] spi: bcm2835: fix kbuild compile warnings/errors and
  a typo
 
 fixes several warnings/error emmitted by the kbuild system:

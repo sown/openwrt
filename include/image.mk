@@ -16,9 +16,14 @@ override NO_TRACE_MAKE:=$(_SINGLE)$(NO_TRACE_MAKE)
 
 KDIR=$(KERNEL_BUILD_DIR)
 KDIR_TMP=$(KDIR)/tmp
-DTS_DIR:=$(LINUX_DIR)/arch/$(ARCH)/boot/dts/
+DTS_DIR:=$(LINUX_DIR)/arch/$(LINUX_KARCH)/boot/dts
 
-IMG_PREFIX:=openwrt-$(if $(CONFIG_VERSION_FILENAMES),$(VERSION_NUMBER)-)$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))
+sanitize = $(call tolower,$(subst _,-,$(1)))
+
+DIST_SANITIZED:=$(call sanitize,$(VERSION_DIST))
+EXTRA_NAME_SANITIZED=$(call sanitize,$(EXTRA_IMAGE_NAME))
+
+IMG_PREFIX:=$(DIST_SANITIZED)-$(if $(CONFIG_VERSION_FILENAMES),$(VERSION_NUMBER)-)$(if $(EXTRA_NAME_SANITIZED),$(EXTRA_NAME_SANITIZED)-)$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))
 
 MKFS_DEVTABLE_OPT := -D $(INCLUDE_DIR)/device_table.txt
 
@@ -85,9 +90,7 @@ define add_jffs2_mark
 	echo -ne '\xde\xad\xc0\xde' >> $(1)
 endef
 
-define toupper
-$(shell echo $(1) | tr '[:lower:]' '[:upper:]')
-endef
+PROFILE_SANITIZED := $(call sanitize,$(PROFILE))
 
 define split_args
 $(foreach data, \
@@ -132,9 +135,9 @@ endef
 # $(3) extra CPP flags
 # $(4) extra DTC flags
 define Image/BuildDTB
-	$(CPP) -nostdinc -x assembler-with-cpp \
-		-I$(LINUX_DIR)/arch/$(ARCH)/boot/dts \
-		-I$(LINUX_DIR)/arch/$(ARCH)/boot/dts/include \
+	$(TARGET_CROSS)cpp -nostdinc -x assembler-with-cpp \
+		-I$(DTS_DIR) \
+		-I$(DTS_DIR)/include \
 		-undef -D__DTS__ $(3) \
 		-o $(2).tmp $(1)
 	$(LINUX_DIR)/scripts/dtc/dtc -O dtb \
@@ -245,7 +248,7 @@ define Image/mkfs/cpiogz
 endef
 
 define Image/mkfs/targz
-	$(TAR) -czpf $(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE),-$(PROFILE))-rootfs.tar.gz --numeric-owner --owner=0 --group=0 --sort=name -C $(TARGET_DIR)/ .
+	$(TAR) -czpf $(BIN_DIR)/$(IMG_PREFIX)$(if $(PROFILE_SANITIZED),-$(PROFILE_SANITIZED))-rootfs.tar.gz --numeric-owner --owner=0 --group=0 --sort=name -C $(TARGET_DIR)/ .
 endef
 
 E2SIZE=$(shell echo $$(($(CONFIG_TARGET_ROOTFS_PARTSIZE)*1024*1024)))
@@ -282,7 +285,7 @@ endef
 define BuildImage/mkfs
   install: mkfs-$(1)
   .PHONY: mkfs-$(1)
-  mkfs-$(1): mkfs_prepare
+  mkfs-$(1): kernel_prepare
 	$(Image/mkfs/$(1))
 	$(call Build/mkfs/default,$(1))
 	$(call Build/mkfs/$(1),$(1))
@@ -337,9 +340,24 @@ define Build/gzip
 	@mv $@.new $@
 endef
 
+define Build/jffs2
+	rm -rf $(KDIR_TMP)/$(DEVICE_NAME)/jffs2 && \
+		mkdir -p $(KDIR_TMP)/$(DEVICE_NAME)/jffs2/$$(dirname $(1)) && \
+		cp $@ $(KDIR_TMP)/$(DEVICE_NAME)/jffs2/$(1) && \
+		$(STAGING_DIR_HOST)/bin/mkfs.jffs2 --pad \
+			$(if $(CONFIG_BIG_ENDIAN),--big-endian,--little-endian) \
+			--squash-uids -v -e $(patsubst %k,%KiB,$(BLOCKSIZE)) \
+			-o $@.new \
+			-d $(KDIR_TMP)/$(DEVICE_NAME)/jffs2 \
+			2>&1 1>/dev/null | awk '/^.+$$$$/' && \
+		$(STAGING_DIR_HOST)/bin/padjffs2 $@.new -J $(patsubst %k,,$(BLOCKSIZE))
+	-rm -rf $(KDIR_TMP)/$(DEVICE_NAME)/jffs2/
+	@mv $@.new $@
+endef
+
 define Build/kernel-bin
 	rm -f $@
-	cp $^ $@
+	cp $< $@
 endef
 
 define Build/patch-cmdline
@@ -359,7 +377,8 @@ define Build/append-ubi
 		$(if $(KERNEL_IN_UBI),--kernel $(word 1,$^)) \
 		$(word 2,$^) \
 		$@.tmp \
-		-p $(BLOCKSIZE) -m $(PAGESIZE) -E 5
+		-p $(BLOCKSIZE) -m $(PAGESIZE) -E 5 \
+		$(if $(SUBPAGESIZE),-s $(SUBPAGESIZE))
 	cat $@.tmp >> $@
 	rm $@.tmp
 endef
@@ -422,8 +441,10 @@ define Device/Init
   KERNEL_IMAGE = $$(KERNEL_PREFIX)$$(KERNEL_SUFFIX)
   KERNEL_INITRAMFS_PREFIX = $$(IMAGE_PREFIX)-initramfs
   KERNEL_INITRAMFS_IMAGE = $$(KERNEL_INITRAMFS_PREFIX)$$(KERNEL_SUFFIX)
+  KERNEL_INITRAMFS_NAME = $$(KERNEL_NAME)-initramfs
   KERNEL_INSTALL :=
   KERNEL_NAME := vmlinux
+  KERNEL_DEPENDS :=
   KERNEL_SIZE :=
 
   FILESYSTEMS := $(TARGET_FILESYSTEMS)
@@ -434,7 +455,7 @@ define Device/ExportVar
 
 endef
 define Device/Export
-  $(foreach var,$(DEVICE_VARS) DEVICE_NAME KERNEL KERNEL_INITRAMFS,$(call Device/ExportVar,$(1),$(var)))
+  $(foreach var,$(DEVICE_VARS) DEVICE_NAME KERNEL KERNEL_INITRAMFS KERNEL_INITRAMFS_IMAGE,$(call Device/ExportVar,$(1),$(var)))
   $(1) : FILESYSTEM:=$(2)
 endef
 
@@ -448,11 +469,11 @@ define Device/Build/initramfs
   $(call Device/Export,$(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE),$(1))
   $$(_TARGET): $(BIN_DIR)/$$(KERNEL_INITRAMFS_IMAGE)
 
-  $(KDIR)/$$(KERNEL_NAME)-initramfs: image_prepare
+  $(KDIR)/$$(KERNEL_INITRAMFS_NAME):: image_prepare
   $(BIN_DIR)/$$(KERNEL_INITRAMFS_IMAGE): $(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE)
 	cp $$^ $$@
 
-  $(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE): $(KDIR)/$$(KERNEL_NAME)-initramfs
+  $(KDIR)/tmp/$$(KERNEL_INITRAMFS_IMAGE): $(KDIR)/$$(KERNEL_INITRAMFS_NAME) $(CURDIR)/Makefile $$(KERNEL_DEPENDS)
 	@rm -f $$@
 	$$(call concat_cmd,$$(KERNEL_INITRAMFS))
 endef
@@ -475,7 +496,7 @@ endef
 
 define Device/Build/kernel
   _KERNEL_IMAGES += $(KDIR)/$$(KERNEL_NAME)
-  $(KDIR)/$$(KERNEL_NAME): image_prepare
+  $(KDIR)/$$(KERNEL_NAME):: image_prepare
   $$(_TARGET): $$(if $$(KERNEL_INSTALL),$(BIN_DIR)/$$(KERNEL_IMAGE))
   $(call Device/Export,$(KDIR)/$$(KERNEL_IMAGE),$(1))
   $(BIN_DIR)/$$(KERNEL_IMAGE): $(KDIR)/$$(KERNEL_IMAGE)
@@ -484,7 +505,7 @@ define Device/Build/kernel
     ifdef CONFIG_IB
       install: $(KDIR)/$$(KERNEL_IMAGE)
     endif
-    $(KDIR)/$$(KERNEL_IMAGE): $(KDIR)/$$(KERNEL_NAME)
+    $(KDIR)/$$(KERNEL_IMAGE): $(KDIR)/$$(KERNEL_NAME) $(CURDIR)/Makefile $$(KERNEL_DEPENDS)
 	@rm -f $$@
 	$$(call concat_cmd,$$(KERNEL))
 	$$(if $$(KERNEL_SIZE),$$(call Device/Build/check_size,$$(KERNEL_SIZE)))
@@ -560,9 +581,6 @@ define BuildImage
 
   $(foreach device,$(TARGET_DEVICES),$(call Device,$(device)))
   $(foreach fs,$(TARGET_FILESYSTEMS) $(fs-subtypes-y),$(call BuildImage/mkfs,$(fs)))
-
-  $$(sort $$(_KERNEL_IMAGES)):
-	@touch $$@
 
   install: kernel_prepare
 	$(foreach fs,$(TARGET_FILESYSTEMS),

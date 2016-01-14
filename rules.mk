@@ -26,6 +26,11 @@ merge=$(subst $(space),,$(1))
 confvar=$(call merge,$(foreach v,$(1),$(if $($(v)),y,n)))
 strip_last=$(patsubst %.$(lastword $(subst .,$(space),$(1))),%,$(1))
 
+paren_left = (
+paren_right = )
+chars_lower = a b c d e f g h i j k l m n o p q r s t u v w x y z
+chars_upper = A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
 define sep
 
 endef
@@ -34,6 +39,15 @@ define newline
 
 
 endef
+
+__tr_list = $(join $(join $(1),$(foreach char,$(1),$(comma))),$(2))
+__tr_head_stripped = $(subst $(space),,$(foreach cv,$(call __tr_list,$(1),$(2)),$$$(paren_left)subst$(cv)$(comma)))
+__tr_head = $(subst $(paren_left)subst,$(paren_left)subst$(space),$(__tr_head_stripped))
+__tr_tail = $(subst $(space),,$(foreach cv,$(1),$(paren_right)))
+__tr_template = $(__tr_head)$$(1)$(__tr_tail)
+
+$(eval toupper = $(call __tr_template,$(chars_lower),$(chars_upper)))
+$(eval tolower = $(call __tr_template,$(chars_upper),$(chars_lower)))
 
 _SINGLE=export MAKEFLAGS=$(space);
 CFLAGS:=
@@ -143,7 +157,7 @@ ifndef DUMP
     -include $(TOOLCHAIN_DIR)/info.mk
     export GCC_HONOUR_COPTS:=0
     TARGET_CROSS:=$(if $(TARGET_CROSS),$(TARGET_CROSS),$(OPTIMIZE_FOR_CPU)-openwrt-linux$(if $(TARGET_SUFFIX),-$(TARGET_SUFFIX))-)
-    TARGET_CFLAGS+= -fhonour-copts -Wno-error=unused-but-set-variable
+    TARGET_CFLAGS+= -fhonour-copts -Wno-error=unused-but-set-variable -Wno-error=unused-result
     TARGET_CPPFLAGS+= -I$(TOOLCHAIN_DIR)/usr/include
     ifeq ($(CONFIG_USE_MUSL),y)
       TARGET_CPPFLAGS+= -I$(TOOLCHAIN_DIR)/include/fortify
@@ -188,7 +202,7 @@ else
 endif
 
 export PATH:=$(TARGET_PATH)
-export STAGING_DIR
+export STAGING_DIR STAGING_DIR_HOST
 export SH_FUNC:=. $(INCLUDE_DIR)/shell.sh;
 
 PKG_CONFIG:=$(STAGING_DIR_HOST)/bin/pkg-config
@@ -201,7 +215,7 @@ HOST_CPPFLAGS:=-I$(STAGING_DIR_HOST)/include -I$(STAGING_DIR_HOST)/usr/include
 HOST_CFLAGS:=-O2 $(HOST_CPPFLAGS)
 HOST_LDFLAGS:=-L$(STAGING_DIR_HOST)/lib -L$(STAGING_DIR_HOST)/usr/lib
 
-ifeq ($(CONFIG_GCC_VERSION_4_6)$(CONFIG_EXTERNAL_TOOLCHAIN),)
+ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
   TARGET_AR:=$(TARGET_CROSS)gcc-ar
   TARGET_RANLIB:=$(TARGET_CROSS)gcc-ranlib
   TARGET_NM:=$(TARGET_CROSS)gcc-nm
@@ -273,8 +287,9 @@ else
       STRIP:=$(STAGING_DIR_HOST)/bin/sstrip
     endif
   endif
-  RSTRIP:= \
+  RSTRIP= \
     export CROSS="$(TARGET_CROSS)" \
+		$(if $(PKG_BUILD_ID),KEEP_BUILD_ID=1) \
 		$(if $(CONFIG_KERNEL_KALLSYMS),NO_RENAME=1) \
 		$(if $(CONFIG_KERNEL_PROFILING),KEEP_SYMBOLS=1); \
     NM="$(TARGET_CROSS)nm" \

@@ -18,6 +18,9 @@ get_status_led() {
 	antminer-s3)
 		status_led="antminer-s3:green:system"
 		;;
+	antminer-r1)
+		status_led="antminer-r1:green:system"
+		;;
 	ap132)
 		status_led="ap132:green:status"
 		;;
@@ -55,6 +58,12 @@ get_status_led() {
 	bxu2000n-2-a1)
 		status_led="bhu:green:status"
 		;;
+	cap324)
+		status_led="pcs:green:power"
+		;;
+	c-55)
+		status_led="c-55:green:pwr"
+		;;
 	cap4200ag)
 		status_led="senao:green:pwr"
 		;;
@@ -63,6 +72,12 @@ get_status_led() {
 		;;
 	cpe510)
 		status_led="tp-link:green:link4"
+		;;
+	cr3000)
+		status_led="pcs:amber:power"
+		;;
+	cr5000)
+		status_led="pcs:amber:power"
 		;;
 	db120)
 		status_led="db120:green:status"
@@ -86,11 +101,17 @@ get_status_led() {
 	dir-835-a1)
 		status_led="d-link:amber:power"
 		;;
+	dlan-hotspot)
+		status_led="devolo:green:wifi"
+		;;
 	dlan-pro-500-wp)
 		status_led="devolo:green:wlan-2g"
 		;;
 	dlan-pro-1200-ac)
 		status_led="devolo:status:wlan"
+		;;
+	dr344)
+		status_led="dr344:green:status"
 		;;
 	dragino2)
 		status_led="dragino2:red:system"
@@ -146,6 +167,9 @@ get_status_led() {
 	mr16)
 		status_led="mr16:green:power"
 		;;
+	mr18)
+		status_led="mr18:green:tricolor0"
+		;;
 	mr600)
 		status_led="mr600:orange:power"
 		;;
@@ -173,8 +197,11 @@ get_status_led() {
 	nbg460n_550n_550nh)
 		status_led="nbg460n:green:power"
 		;;
+	nbg6616)
+		status_led="nbg6616:green:power"
+		;;
 	nbg6716)
-		status_led="zyxel:white:power"
+		status_led="nbg6716:white:power"
 		;;
 	om2p | \
 	om2pv2 | \
@@ -243,7 +270,8 @@ get_status_led() {
 		status_led="trendnet:blue:wps"
 		;;
 	tew-712br|\
-	tew-732br)
+	tew-732br|\
+	tew-823dru)
 		status_led="trendnet:green:power"
 		;;
 	tl-mr3020)
@@ -292,7 +320,8 @@ get_status_led() {
 	tl-wdr4300 | \
 	tl-wr703n | \
 	tl-wr710n | \
-	tl-wr720n-v3)
+	tl-wr720n-v3 | \
+	tl-wr941nd-v6)
 		status_led="tp-link:blue:system"
 		;;
 	tl-wr841n-v9)

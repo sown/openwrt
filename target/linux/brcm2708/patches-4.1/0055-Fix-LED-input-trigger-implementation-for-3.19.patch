@@ -1,7 +1,7 @@
-From 461dee6548a8872f4325c2a5b06be89abec33293 Mon Sep 17 00:00:00 2001
+From f70193e9a8918b67e119a7f105781e2f4a7a8693 Mon Sep 17 00:00:00 2001
 From: Phil Elwell <phil@raspberrypi.org>
 Date: Thu, 12 Feb 2015 11:17:53 +0000
-Subject: [PATCH 055/171] Fix LED "input" trigger implementation for 3.19
+Subject: [PATCH 055/222] Fix LED "input" trigger implementation for 3.19
 
 ---
  drivers/leds/leds-gpio.c             | 10 +++++++++-

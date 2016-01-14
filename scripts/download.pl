@@ -11,14 +11,18 @@ use warnings;
 use File::Basename;
 use File::Copy;
 
-@ARGV > 2 or die "Syntax: $0 <target dir> <filename> <md5sum> [<mirror> ...]\n";
+@ARGV > 2 or die "Syntax: $0 <target dir> <filename> <md5sum> <url filename> [<mirror> ...]\n";
 
+my $url_filename;
 my $target = shift @ARGV;
 my $filename = shift @ARGV;
 my $md5sum = shift @ARGV;
+$url_filename = shift @ARGV unless $ARGV[0] =~ /:\/\//;
 my $scriptdir = dirname($0);
 my @mirrors;
 my $ok;
+
+$url_filename or $url_filename = $filename;
 
 sub localmirrors {
 	my @mlist;
@@ -106,7 +110,7 @@ sub download
 			return;
 		}
 	} else {
-		open WGET, "wget -t5 --timeout=20 --no-check-certificate $options -O- '$mirror/$filename' |" or die "Cannot launch wget.\n";
+		open WGET, "wget -t5 --timeout=20 --no-check-certificate $options -O- '$mirror/$url_filename' |" or die "Cannot launch wget.\n";
 		open MD5SUM, "| $md5cmd > '$target/$filename.md5sum'" or die "Cannot launch md5sum.\n";
 		open OUTPUT, "> $target/$filename.dl" or die "Cannot create file $target/$filename.dl: $!\n";
 		my $buffer;
@@ -178,15 +182,10 @@ foreach my $mirror (@ARGV) {
 		}
     } elsif ($mirror =~ /^\@GNOME\/(.+)$/) {
 		push @mirrors, "http://ftp.gnome.org/pub/GNOME/sources/$1";
-		push @mirrors, "http://ftp.unina.it/pub/linux/GNOME/sources/$1";
+		push @mirrors, "http://www.mirrorservice.org/sites/ftp.gnome.org/pub/GNOME/sources/$1";
 		push @mirrors, "http://fr2.rpmfind.net/linux/gnome.org/sources/$1";
-		push @mirrors, "ftp://ftp.dit.upm.es/pub/GNOME/sources/$1";
-		push @mirrors, "ftp://ftp.no.gnome.org/pub/GNOME/sources/$1";
 		push @mirrors, "http://ftp.acc.umu.se/pub/GNOME/sources/$1";
-		push @mirrors, "http://ftp.belnet.be/mirror/ftp.gnome.org/sources/$1";
-		push @mirrors, "http://linorg.usp.br/gnome/sources/$1";
-		push @mirrors, "http://mirror.aarnet.edu.au/pub/GNOME/sources/$1";
-		push @mirrors, "http://mirrors.ibiblio.org/pub/mirrors/gnome/sources/$1";
+		push @mirrors, "http://ftp.belnet.be/ftp.gnome.org/sources/$1";
 		push @mirrors, "ftp://ftp.cse.buffalo.edu/pub/Gnome/sources/$1";
 		push @mirrors, "ftp://ftp.nara.wide.ad.jp/pub/X11/GNOME/sources/$1";
     }

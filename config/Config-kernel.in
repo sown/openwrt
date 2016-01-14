@@ -265,6 +265,13 @@ if KERNEL_CGROUPS
 		  Provides a cgroup implementing whitelists for devices which
 		  a process in the cgroup can mknod or open.
 
+	config KERNEL_CGROUP_PIDS
+		bool "PIDs cgroup subsystem"
+		default y
+		help
+		  Provides enforcement of process number limits in the scope of a
+		  cgroup.
+
 	config KERNEL_CPUSETS
 		bool "Cpuset support"
 		default n
@@ -544,3 +551,26 @@ config KERNEL_SECCOMP
 		default n
 		help
 		  Build kernel with support for seccomp.
+
+#
+# IPv6 configuration
+#
+
+config KERNEL_IPV6
+	def_bool IPV6
+
+if KERNEL_IPV6
+
+	config KERNEL_IPV6_MULTIPLE_TABLES
+		def_bool y
+
+	config KERNEL_IPV6_SUBTREES
+		def_bool y
+
+	config KERNEL_IPV6_MROUTE
+		def_bool y
+
+	config KERNEL_IPV6_PIMSM_V2
+		def_bool n
+
+endif
