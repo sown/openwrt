@@ -475,9 +475,6 @@ ar71xx_board_detect() {
 		name="gl-inet"
 		gl_inet_board_detect
 		;;
-	*"GL AR150")
-		name="gl-ar150"
-		;;
 	*"EnGenius EPG5000")
 		name="epg5000"
 		;;
