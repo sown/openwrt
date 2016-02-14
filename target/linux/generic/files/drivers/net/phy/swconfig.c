@@ -25,6 +25,7 @@
 #include <linux/switch.h>
 #include <linux/of.h>
 #include <linux/version.h>
+#include <uapi/linux/mii.h>
 
 #define SWCONFIG_DEVNAME	"switch%d"
 
@@ -1168,38 +1169,48 @@ unregister_switch(struct switch_dev *dev)
 }
 EXPORT_SYMBOL_GPL(unregister_switch);
 
+int
+switch_generic_set_link(struct switch_dev *dev, int port,
+			struct switch_port_link *link)
+{
+	if (WARN_ON(!dev->ops->phy_write16))
+		return -ENOTSUPP;
+
+	/* Generic implementation */
+	if (link->aneg) {
+		dev->ops->phy_write16(dev, port, MII_BMCR, 0x0000);
+		dev->ops->phy_write16(dev, port, MII_BMCR, BMCR_ANENABLE | BMCR_ANRESTART);
+	} else {
+		u16 bmcr = 0;
+
+		if (link->duplex)
+			bmcr |= BMCR_FULLDPLX;
+
+		switch (link->speed) {
+		case SWITCH_PORT_SPEED_10:
+			break;
+		case SWITCH_PORT_SPEED_100:
+			bmcr |= BMCR_SPEED100;
+			break;
+		case SWITCH_PORT_SPEED_1000:
+			bmcr |= BMCR_SPEED1000;
+			break;
+		default:
+			return -ENOTSUPP;
+		}
+
+		dev->ops->phy_write16(dev, port, MII_BMCR, bmcr);
+	}
+
+	return 0;
+}
 
 static int __init
 swconfig_init(void)
 {
-	int err;
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0))
-	int i;
-#endif
-
 	INIT_LIST_HEAD(&swdevs);
 	
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0))
-	err = genl_register_family(&switch_fam);
-	if (err)
-		return err;
-
-	for (i = 0; i < ARRAY_SIZE(swconfig_ops); i++) {
-		err = genl_register_ops(&switch_fam, &swconfig_ops[i]);
-		if (err)
-			goto unregister;
-	}
-	return 0;
-
-unregister:
-	genl_unregister_family(&switch_fam);
-	return err;
-#else
-	err = genl_register_family_with_ops(&switch_fam, swconfig_ops);
-	if (err)
-		return err;
-	return 0;
-#endif
+	return genl_register_family_with_ops(&switch_fam, swconfig_ops);
 }
 
 static void __exit

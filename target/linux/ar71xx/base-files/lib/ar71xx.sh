@@ -824,6 +824,9 @@ ar71xx_board_detect() {
 	*"TL-WA801ND v2")
 		name="tl-wa801nd-v2"
 		;;
+	*"TL-WA801ND v3")
+		name="tl-wa801nd-v3"
+		;;
 	*TL-WA901ND)
 		name="tl-wa901nd"
 		;;
@@ -905,6 +908,9 @@ ar71xx_board_detect() {
 	*UniFi)
 		name="unifi"
 		;;
+	*"UniFi-AC")
+		name="unifiac"
+		;;
 	*"UniFi AP Pro")
 		name="uap-pro"
 		;;
@@ -973,6 +979,9 @@ ar71xx_board_detect() {
 		;;
 	*"WNR1000 V2")
 		name="wnr1000-v2"
+		;;
+	*WPN824N)
+		name="wpn824n"
 		;;
 	*WRT160NL)
 		name="wrt160nl"

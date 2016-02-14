@@ -8,13 +8,20 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=glibc
 PKG_VERSION:=$(call qstrip,$(CONFIG_GLIBC_VERSION))
-PKG_REVISION:=$(call qstrip,$(CONFIG_GLIBC_REVISION))
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=git://sourceware.org/git/glibc.git
-PKG_SOURCE_VERSION:=$(PKG_REVISION)
-PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)-r$(PKG_REVISION)
-PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.bz2
+ifeq ($(PKG_VERSION),2.22)
+  PKG_SOURCE_URL:=http://ftpmirror.gnu.org/libc
+  PKG_MD5SUM:=eb731406903befef1d8f878a46be75ef862b9056ab0cde1626d08a7a05328948
+  PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
+  PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.xz
+else
+  PKG_REVISION:=$(call qstrip,$(CONFIG_GLIBC_REVISION))
+  PKG_SOURCE_PROTO:=git
+  PKG_SOURCE_URL:=git://sourceware.org/git/glibc.git
+  PKG_SOURCE_VERSION:=$(PKG_REVISION)
+  PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)-r$(PKG_REVISION)
+  PKG_SOURCE:=$(PKG_SOURCE_SUBDIR).tar.bz2
+endif
 
 GLIBC_PATH:=
 ifneq ($(CONFIG_EGLIBC_VERSION_2_19),)
@@ -72,10 +79,10 @@ export HOST_CFLAGS := $(HOST_CFLAGS) -idirafter $(CURDIR)/$(PATH_PREFIX)/include
 
 define Host/SetToolchainInfo
 	$(SED) 's,^\(LIBC_TYPE\)=.*,\1=$(PKG_NAME),' $(TOOLCHAIN_DIR)/info.mk
-ifneq ($(CONFIG_GLIBC_VERSION_2_21),)
-	$(SED) 's,^\(LIBC_URL\)=.*,\1=http://www.gnu.org/software/libc/,' $(TOOLCHAIN_DIR)/info.mk
-else
+ifneq ($(CONFIG_EGLIBC_VERSION_2_19),)
 	$(SED) 's,^\(LIBC_URL\)=.*,\1=http://www.eglibc.org/,' $(TOOLCHAIN_DIR)/info.mk
+else
+	$(SED) 's,^\(LIBC_URL\)=.*,\1=http://www.gnu.org/software/libc/,' $(TOOLCHAIN_DIR)/info.mk
 endif
 	$(SED) 's,^\(LIBC_VERSION\)=.*,\1=$(PKG_VERSION),' $(TOOLCHAIN_DIR)/info.mk
 	$(SED) 's,^\(LIBC_SO_VERSION\)=.*,\1=$(PKG_VERSION),' $(TOOLCHAIN_DIR)/info.mk
@@ -97,7 +104,7 @@ endef
 define Host/Prepare
 	$(call Host/Prepare/Default)
 	ln -snf $(PKG_SOURCE_SUBDIR) $(BUILD_DIR_TOOLCHAIN)/$(PKG_NAME)
-ifeq ($(CONFIG_GLIBC_VERSION_2_21),)
+ifneq ($(CONFIG_EGLIBC_VERSION_2_19),)
 	$(SED) 's,y,n,' $(HOST_BUILD_DIR)/libc/option-groups.defaults
 endif
 endef
