@@ -1,0 +1,84 @@
+diff -ur hostapd-2016-06-15.orig/src/ap/accounting.c hostapd-2016-06-15/src/ap/accounting.c
+--- hostapd-2016-06-15.orig/src/ap/accounting.c	2017-10-28 12:21:54.000000000 +0100
++++ hostapd-2016-06-15/src/ap/accounting.c	2017-10-28 18:15:53.937262722 +0100
+@@ -98,6 +98,58 @@
+ 		}
+ 	}
+ 
++	if(sta)
++	{
++		int rv = 0;
++		FILE *proc = NULL;
++		char ip[128];
++		unsigned short mac[6];
++
++		memset(&ip, 0, sizeof(ip));
++		memset(&mac, 0, sizeof(mac));
++
++		proc = fopen("/proc/net/arp", "r");
++		if(proc == NULL)
++		{
++			fprintf(stderr, "Failed to open /proc/net/arp\n");
++			exit(1);
++		}
++
++	        // Discard the first line/titles:
++		// IP address HW type Flags HW address Mask Device
++		rv = fscanf(proc, "%*s %*s %*s %*s %*s %*s %*s %*s %*s\n");
++
++		// Now read records of this format:
++		//192.168.5.1 0x1 0x2 00:16:b6:2a:b8:ef * eth0
++		while(!feof(proc))
++		{
++			rv = fscanf(proc,
++				"%128s %*s %*s %hx:%hx:%hx:%hx:%hx:%hx %*s %*s\n",
++				&ip[0], &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
++			if(rv == 7)
++			{
++				if((sta->addr[0] == mac[0]) && (sta->addr[1] == mac[1]) && (sta->addr[2] == mac[2]) && 
++						(sta->addr[3] == mac[3]) && (sta->addr[4] == mac[4]) && (sta->addr[5] == mac[5]))
++				{
++					struct in_addr address;
++					memset(&address, 0, sizeof(struct in_addr));
++					if(inet_pton(AF_INET, &ip[0], &address) == 1)
++					{
++						sta->ipv4_addr = address.s_addr;
++					}
++				}
++			}
++		}
++		fclose(proc);
++
++		if(!radius_msg_add_attr(msg, RADIUS_ATTR_FRAMED_IP_ADDRESS,
++					  (u8 *)&(sta->ipv4_addr), 4))
++		{
++			fprintf(stderr, "Could not add ip address\n");
++		}
++	}
++
++
+ 	if (add_common_radius_attr(hapd, hapd->conf->radius_acct_req_attr, sta,
+ 				   msg) < 0)
+ 		goto fail;
+diff -ur hostapd-2016-06-15.orig/src/ap/sta_info.h hostapd-2016-06-15/src/ap/sta_info.h
+--- hostapd-2016-06-15.orig/src/ap/sta_info.h	2017-10-28 12:21:54.000000000 +0100
++++ hostapd-2016-06-15/src/ap/sta_info.h	2017-10-28 18:17:09.010561852 +0100
+@@ -66,6 +66,7 @@
+ 	struct sta_info *hnext; /* next entry in hash table list */
+ 	u8 addr[6];
+ 	be32 ipaddr;
++	u32 ipv4_addr;
+ 	struct dl_list ip6addr; /* list head for struct ip6addr */
+ 	u16 aid; /* STA's unique AID (1 .. 2007) or 0 if not yet assigned */
+ 	u32 flags; /* Bitfield of WLAN_STA_* */
+diff -ur hostapd-2016-06-15.orig/src/radius/radius.h hostapd-2016-06-15/src/radius/radius.h
+--- hostapd-2016-06-15.orig/src/radius/radius.h	2017-10-28 12:21:54.000000000 +0100
++++ hostapd-2016-06-15/src/radius/radius.h	2017-10-28 18:16:31.421911394 +0100
+@@ -54,6 +54,7 @@
+        RADIUS_ATTR_NAS_PORT = 5,
+        RADIUS_ATTR_SERVICE_TYPE = 6,
+        RADIUS_ATTR_FRAMED_IP_ADDRESS = 8,
++       RADIUS_ATTR_FRAMED_IP_NETMASK = 9,
+        RADIUS_ATTR_FRAMED_MTU = 12,
+        RADIUS_ATTR_REPLY_MESSAGE = 18,
+        RADIUS_ATTR_STATE = 24,
