@@ -1,0 +1,2 @@
+#!/bin/sh /etc/rc.common
+# We do something different for LEDs, so we don't want the original LED script
