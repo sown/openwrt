@@ -1,0 +1,4 @@
+#! /bin/ash
+for file in `ls -1 /etc/rc.local.d`; do
+	/etc/rc.local.d/$file
+done
