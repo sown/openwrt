@@ -5454,8 +5454,8 @@ CONFIG_PACKAGE_wwan=y
 #
 # SOWN
 #
-# CONFIG_PACKAGE_sown-core is not set
-# CONFIG_PACKAGE_sown-leds-ar150 is not set
+CONFIG_PACKAGE_sown-core=y
+CONFIG_PACKAGE_sown-leds-ar150=y
 # CONFIG_PACKAGE_sown-leds-om2p is not set
 
 #
