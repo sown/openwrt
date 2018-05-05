@@ -12,7 +12,7 @@ include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/feeds.mk
 
 PKG_NAME:=base-files
-PKG_RELEASE:=184
+PKG_RELEASE:=190
 PKG_FLAGS:=nonshared
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
@@ -65,8 +65,6 @@ define Package/base-files/conffiles
 /etc/shadow
 /etc/shells
 /etc/sysctl.conf
-/etc/sysctl.d/
-/etc/sysctl.d/local.conf
 /etc/sysupgrade.conf
 $(call $(TARGET)/conffiles)
 endef
@@ -171,7 +169,7 @@ define Package/base-files/install
 	mkdir -p $(1)/root
 	$(LN) /proc/mounts $(1)/etc/mtab
 	rm -f $(1)/var
-	$(LN) /tmp $(1)/var
+	$(LN) tmp $(1)/var
 	mkdir -p $(1)/etc
 	$(LN) /tmp/resolv.conf /tmp/TZ /tmp/localtime $(1)/etc/
 

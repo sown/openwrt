@@ -189,6 +189,10 @@ hostapd_common_add_bss_config() {
 	config_add_int wps_ap_setup_locked wps_independent
 	config_add_string wps_device_type wps_device_name wps_manufacturer wps_pin
 
+	config_add_boolean ieee80211v wnm_sleep_mode bss_transition
+	config_add_int time_advertisement
+	config_add_string time_zone
+
 	config_add_boolean ieee80211r pmk_r1_push ft_psk_generate_local ft_over_ds
 	config_add_int r0_key_lifetime reassociation_deadline
 	config_add_string mobility_domain r1_key_holder
@@ -392,6 +396,21 @@ hostapd_set_bss_options() {
 		network_get_device ifname "$iapp_interface" || ifname="$iapp_interface"
 		append bss_conf "iapp_interface=$ifname" "$N"
 	}
+
+	json_get_vars ieee80211v
+	set_default ieee80211v 0
+	if [ "$ieee80211v" -eq "1" ]; then
+		json_get_vars time_advertisement time_zone wnm_sleep_mode bss_transition
+
+		set_default time_advertisement 0
+		set_default wnm_sleep_mode 0
+		set_default bss_transition 0
+
+		append bss_conf "time_advertisement=$time_advertisement" "$N"
+		[ -n "$time_zone" ] && append bss_conf "time_zone=$time_zone" "$N"
+		append bss_conf "wnm_sleep_mode=$wnm_sleep_mode" "$N"
+		append bss_conf "bss_transition=$bss_transition" "$N"
+	fi
 
 	if [ "$wpa" -ge "1" ]; then
 		json_get_vars ieee80211r
@@ -628,6 +647,7 @@ wpa_supplicant_add_network() {
 	local ifname="$1"
 	local freq="$2"
 	local htmode="$3"
+	local noscan="$4"
 
 	_wpa_supplicant_common "$1"
 	wireless_vif_parse_encryption
@@ -657,11 +677,13 @@ wpa_supplicant_add_network() {
 	}
 
 	[[ "$_w_mode" = "mesh" ]] && {
-		json_get_vars mesh_id
+		json_get_vars mesh_id mesh_fwding
 		ssid="${mesh_id}"
 
 		append network_data "mode=5" "$N$T"
+		[ -n "$mesh_fwding" ] && append network_data "mesh_fwding=${mesh_fwding}" "$N$T"
 		[ -n "$channel" ] && wpa_supplicant_set_fixed_freq "$freq" "$htmode"
+		[ "$noscan" = "1" ] && append network_data "noscan=1" "$N$T"
 		append wpa_key_mgmt "SAE"
 		scan_ssid=""
 	}
@@ -687,7 +709,11 @@ wpa_supplicant_add_network() {
 			if [ ${#key} -eq 64 ]; then
 				passphrase="psk=${key}"
 			else
-				passphrase="psk=\"${key}\""
+				if [ "$_w_mode" = "mesh" ]; then
+					passphrase="sae_password=\"${key}\""
+				else
+					passphrase="psk=\"${key}\""
+				fi
 			fi
 			append network_data "$passphrase" "$N$T"
 		;;
